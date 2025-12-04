@@ -6,6 +6,8 @@ package Views;
 
 import Controllers.Controller;
 import javax.swing.JFileChooser;
+import java.util.List;
+import javax.swing.table.DefaultTableModel;
 
 /**
  *
@@ -313,4 +315,53 @@ public class GdG extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane4;
     public javax.swing.JTextField txtRuta;
     // End of variables declaration//GEN-END:variables
+
+    // --- Métodos públicos para poblar la vista desde el controlador ---
+    public void setInputString(String s) {
+        this.AL_txt.setText(s);
+    }
+
+    public void setResultText(String text){
+        this.AL_txt.setText(text);
+    }
+
+    public void setSymbols(List<String[]> rows) {
+        DefaultTableModel model = (DefaultTableModel) Simb_Table.getModel();
+        model.setRowCount(0);
+        if (rows == null) return;
+        for (String[] r : rows) {
+            if (r == null) continue;
+            if (r.length >= 2) model.addRow(new Object[]{r[0], r[1]});
+            else model.addRow(new Object[]{r[0], ""});
+        }
+    }
+
+    public void setFirst(List<String> items) {
+        DefaultTableModel model = (DefaultTableModel) FIRST_table.getModel();
+        model.setRowCount(0);
+        if (items == null) return;
+        for (String s : items) model.addRow(new Object[]{s});
+    }
+
+    public void setNonTerminals(List<String> items) {
+        DefaultTableModel model = (DefaultTableModel) SimbNT_table.getModel();
+        model.setRowCount(0);
+        if (items == null) return;
+        for (String s : items) model.addRow(new Object[]{s});
+    }
+
+    public void setFollow(List<String> items) {
+        DefaultTableModel model = (DefaultTableModel) FOLLOW_table.getModel();
+        model.setRowCount(0);
+        if (items == null) return;
+        for (String s : items) model.addRow(new Object[]{s});
+    }
+
+    public void clearTables() {
+        ((DefaultTableModel) Simb_Table.getModel()).setRowCount(0);
+        ((DefaultTableModel) FIRST_table.getModel()).setRowCount(0);
+        ((DefaultTableModel) SimbNT_table.getModel()).setRowCount(0);
+        ((DefaultTableModel) FOLLOW_table.getModel()).setRowCount(0);
+    }
+
 }

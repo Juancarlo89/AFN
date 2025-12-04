@@ -5,6 +5,8 @@
 package Views;
 
 import Controllers.Controller;
+import java.util.List;
+import javax.swing.table.DefaultTableModel;
 
 /**
  *
@@ -231,4 +233,37 @@ public class LR0 extends javax.swing.JFrame {
     private javax.swing.JTextArea jTextArea1;
     public javax.swing.JTextField txtRuta;
     // End of variables declaration//GEN-END:variables
+
+    // --- Métodos públicos para poblar la vista desde el controlador ---
+    public void setGrammarText(String text) {
+        this.jTextArea1.setText(text);
+    }
+
+    public void setResultText(String text){
+        this.jTextArea1.setText(text);
+    }
+
+    public void clearTables() {
+        ((DefaultTableModel) FIRST_table.getModel()).setRowCount(0);
+        ((DefaultTableModel) FOLLOW_table.getModel()).setRowCount(0);
+    }
+
+    public void setFirst(List<String> items) {
+        DefaultTableModel model = (DefaultTableModel) FIRST_table.getModel();
+        model.setRowCount(0);
+        if (items == null) return;
+        for (String s : items) model.addRow(new Object[]{s});
+    }
+
+    public void setFollow(List<String[]> rows) {
+        DefaultTableModel model = (DefaultTableModel) FOLLOW_table.getModel();
+        model.setRowCount(0);
+        if (rows == null) return;
+        for (String[] r : rows) {
+            if (r == null) continue;
+            if (r.length >= 2) model.addRow(new Object[]{r[0], r[1]});
+            else model.addRow(new Object[]{r[0], ""});
+        }
+    }
+
 }

@@ -440,15 +440,125 @@ public class Controller implements ActionListener {
             ll.setVisible(false);
             mainpage.setVisible(true);
         }else if(e.getSource() == ll.OKLL1_btn){
-            
-        
+            String ruta = ll.txtRuta.getText();
+            if (ruta == null || ruta.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(null, "Cargue primero un archivo", "Advertencia", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            try {
+                java.nio.file.Path p = java.nio.file.Paths.get(ruta);
+                if (!java.nio.file.Files.exists(p)) {
+                    JOptionPane.showMessageDialog(null, "Archivo no encontrado:\n" + ruta, "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                // Cargar gramática y calcular FIRST/FOLLOW
+                Models.Grammar gr = new Models.Grammar();
+                gr.loadFromFile(ruta);
+                java.util.Map<String, java.util.Set<String>> F = gr.computeFirst();
+                java.util.Map<String, java.util.Set<String>> FO = gr.computeFollow();
+
+                // Poblar vista LL1
+                List<String> firstRows = new java.util.ArrayList<>();
+                List<String[]> followRows = new java.util.ArrayList<>();
+                for (String A : gr.nonTerminals()) {
+                    java.util.Set<String> s = F.getOrDefault(A, java.util.Collections.emptySet());
+                    String joined = String.join(", ", s);
+                    firstRows.add(A + " : {" + joined + "}");
+
+                    java.util.Set<String> fo = FO.getOrDefault(A, java.util.Collections.emptySet());
+                    String joinedFo = String.join(", ", fo);
+                    followRows.add(new String[]{A, joinedFo});
+                }
+
+                ll.setGrammarText(new String(java.nio.file.Files.readAllBytes(p)));
+                ll.setFirst(firstRows);
+                ll.setFollow(followRows);
+                // Construir tabla LL(1)
+                Models.LL1Parser llp = new Models.LL1Parser(gr);
+                boolean isLL1 = llp.build();
+                String tableStr = llp.tableToString();
+                String fileContent = new String(java.nio.file.Files.readAllBytes(p));
+                ll.setResultText(fileContent + "\n\n" + tableStr);
+
+                if(isLL1) JOptionPane.showMessageDialog(null, "Gramática es LL(1). Tabla mostrada en la vista.");
+                else JOptionPane.showMessageDialog(null, "La gramática NO es LL(1). Revise los conflictos en la tabla mostrada.");
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(null, "Error al procesar la gramática:\n" + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
             
             //Espacio para controlar los botones de LR0
         }else if(e.getSource() == lr.OutLR_btn){
             lr.setVisible(false);
             mainpage.setVisible(true);
         }else if(e.getSource() == lr.OKLR_btn){
-            
+            String ruta = lr.txtRuta.getText();
+            if (ruta == null || ruta.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(null, "Cargue primero un archivo", "Advertencia", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            try {
+                java.nio.file.Path p = java.nio.file.Paths.get(ruta);
+                if (!java.nio.file.Files.exists(p)) {
+                    JOptionPane.showMessageDialog(null, "Archivo no encontrado:\n" + ruta, "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                // Cargar gramática y calcular FIRST/FOLLOW (se muestran en LR0 también)
+                Models.Grammar gr = new Models.Grammar();
+                gr.loadFromFile(ruta);
+                java.util.Map<String, java.util.Set<String>> F = gr.computeFirst();
+                java.util.Map<String, java.util.Set<String>> FO = gr.computeFollow();
+
+                List<String> firstRows = new java.util.ArrayList<>();
+                List<String[]> followRows = new java.util.ArrayList<>();
+                for (String A : gr.nonTerminals()) {
+                    java.util.Set<String> s = F.getOrDefault(A, java.util.Collections.emptySet());
+                    String joined = String.join(", ", s);
+                    firstRows.add(A + " : {" + joined + "}");
+
+                    java.util.Set<String> fo = FO.getOrDefault(A, java.util.Collections.emptySet());
+                    String joinedFo = String.join(", ", fo);
+                    followRows.add(new String[]{A, joinedFo});
+                }
+
+                lr.setGrammarText(new String(java.nio.file.Files.readAllBytes(p)));
+                lr.setFirst(firstRows);
+                lr.setFollow(followRows);
+                // Construir colección canónica LR(0)
+                Models.LR0Parser lrparser = new Models.LR0Parser(gr);
+                Models.LR0Parser.CanonicalResult cres = lrparser.buildCanonicalCollection();
+
+                StringBuilder out = new StringBuilder();
+                out.append("LR(0) Canonical Collection. States: ").append(cres.states.size()).append("\n\n");
+                for (int i = 0; i < cres.states.size(); i++) {
+                    out.append("State ").append(i).append("\n");
+                    for (Models.LR0Parser.Item it : cres.states.get(i).items) {
+                        out.append("  ").append(it.toString()).append("\n");
+                    }
+                    out.append("\n");
+                }
+                out.append("Transitions:\n");
+                for (java.util.Map.Entry<Integer, java.util.Map<String, Integer>> entr : cres.transitions.entrySet()) {
+                    int from = entr.getKey();
+                    for (java.util.Map.Entry<String, Integer> t : entr.getValue().entrySet()) {
+                        out.append("  ").append(from).append(" --[").append(t.getKey()).append("]--> ").append(t.getValue()).append("\n");
+                    }
+                }
+                if (!cres.conflicts.isEmpty()) {
+                    out.append("\nConflicts detected:\n");
+                    for (String cstr : cres.conflicts) out.append(cstr).append("\n");
+                } else {
+                    out.append("\nNo LR(0) conflicts detected.\n");
+                }
+
+                lr.setResultText(out.toString());
+                JOptionPane.showMessageDialog(null, "Construcción LR(0) completada. Revise la vista LR(0) para detalles.");
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(null, "Error al procesar la gramática:\n" + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
         
         
         //Espacio para controlar los botones de la calculadora
@@ -458,7 +568,6 @@ public class Controller implements ActionListener {
         }else if(e.getSource() == c.OKCalc_btn){
             String sigma = c.ExA_txt.getText().trim();
             String ruta = c.txtRuta.getText();
-            String AFDtext = c.afd;
                         
             //Validaciones UI
             if(sigma.isEmpty()){
@@ -497,7 +606,76 @@ public class Controller implements ActionListener {
             gg.setVisible(false);
             mainpage.setVisible(true);
         }else if(e.getSource() == gg.OKGG_btn){
-            
+            String ruta = gg.txtRuta.getText();
+            String cadena = gg.AL_txt.getText();
+
+            if (ruta == null || ruta.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(null, "Cargue primero un archivo de gramática", "Advertencia", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            if (cadena == null || cadena.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(null, "Ingrese la cadena a analizar sintácticamente", "Advertencia", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            try {
+                java.nio.file.Path p = java.nio.file.Paths.get(ruta);
+                if (!java.nio.file.Files.exists(p)) {
+                    JOptionPane.showMessageDialog(null, "Archivo no encontrado:\n" + ruta, "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                Models.Grammar gr = new Models.Grammar();
+                gr.loadFromFile(ruta);
+                java.util.Map<String, java.util.Set<String>> F = gr.computeFirst();
+                java.util.Map<String, java.util.Set<String>> FO = gr.computeFollow();
+
+                // preparar símbolos: marcar terminal/nonterminal
+                List<String[]> simbRows = new java.util.ArrayList<>();
+                for(String t : gr.Vt){
+                    simbRows.add(new String[]{t, "terminal"});
+                }
+                for(String nt : gr.Vn){
+                    simbRows.add(new String[]{nt, "non-terminal"});
+                }
+
+                // non-terminals list
+                List<String> nts = new java.util.ArrayList<>(gr.Vn);
+
+                // first and follow as simple lists
+                List<String> firstList = new java.util.ArrayList<>();
+                List<String> followList = new java.util.ArrayList<>();
+                for(String A : gr.nonTerminals()){
+                    firstList.add(A + " : {" + String.join(", ", F.getOrDefault(A, java.util.Collections.emptySet())) + "}");
+                    followList.add(A + " : {" + String.join(", ", FO.getOrDefault(A, java.util.Collections.emptySet())) + "}");
+                }
+
+                gg.setInputString(cadena);
+                gg.setSymbols(simbRows);
+                gg.setNonTerminals(nts);
+                gg.setFirst(firstList);
+                gg.setFollow(followList);
+
+                    // Intentar construir tabla LL(1) y, si es LL(1), analizar la cadena dada
+                    Models.LL1Parser llp = new Models.LL1Parser(gr);
+                    boolean isLL1 = llp.build();
+                    String tableStr = llp.tableToString();
+                    StringBuilder resOut = new StringBuilder();
+                    resOut.append("FIRST/FOLLOW y símbolos listados.\n\n");
+                    resOut.append(tableStr).append("\n");
+                    if(isLL1){
+                        boolean parsed = llp.parseInput(cadena);
+                        resOut.append(parsed ? "La cadena fue aceptada por el parser LL(1)." : "La cadena NO fue aceptada por el parser LL(1).");
+                    } else {
+                        resOut.append("No se puede analizar con LL(1) (conflictos en la tabla).\n");
+                    }
+
+                    gg.setResultText(resOut.toString());
+                    JOptionPane.showMessageDialog(null, "Gramática procesada y datos mostrados en GdG.");
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(null, "Error al procesar la gramática:\n" + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 }
